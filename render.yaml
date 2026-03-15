@@ -1,21 +1,32 @@
 services:
-- type: web
-  name: nocodb
-  env: docker
-  autoDeploy: false
-  healthCheckPath: /dashboard#
-  envVars:
-  - key: DATABASE_URL
-    fromDatabase:
-      name: nocodb-db
-      property: connectionString
-  - key: PORT
-    value: 8080
-  - key: NC_DISABLE_API_THROT
-    value: "true"  # Optional: disable throttling
+  - type: web
+    name: nocodb
+    env: node
+    buildCommand: |
+      npm i -g pnpm@latest
+      pnpm install --frozen-lockfile --filter=nocodb-sdk --filter=nc-gui
+      pnpm run build
+      pnpm --filter nocodb run registerIntegrations
+    startCommand: pnpm --filter nocodb run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.17.0  # Match NocoDB's supported Node
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nocodb-db
+          property: connectionString
+      - key: PORT
+        value: 8080
+      - key: NC_DISABLE_API_THROT
+        value: "true"
+      - key: NC_AUTH_JWT_SECRET
+        generateValue: true  # Auto-generate for security
+    healthCheckPath: /dashboard#
+    autoDeploy: false
 
 databases:
-- name: nocodb-db
-  databaseName: nocodb
-  user: nocodb
+  - name: nocodb-db
+    databaseName: nocodb
+    postgresVersion: 15
+    user: nocodb
 
